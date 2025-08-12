@@ -1723,3 +1723,469 @@ document.addEventListener('DOMContentLoaded', function() {
     loadSavedSettings();
 });
 
+
+// ===== دوال الداشبورد المتقدم =====
+
+// إنشاء مؤشر الأداء (عداد السيارة)
+function createPerformanceGauge(containerId, value, previousValue = null) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // تحديد اللون والحالة
+    let color = '#28a745'; // أخضر
+    let status = 'ثابت';
+    let statusIcon = 'fas fa-minus';
+    
+    if (previousValue !== null) {
+        if (value > previousValue) {
+            color = '#28a745'; // أخضر - مرتفع
+            status = 'مرتفع';
+            statusIcon = 'fas fa-arrow-up';
+        } else if (value < previousValue) {
+            color = '#dc3545'; // أحمر - منخفض
+            status = 'منخفض';
+            statusIcon = 'fas fa-arrow-down';
+        }
+    }
+    
+    // تحديد اللون حسب القيمة
+    if (value >= 4) color = '#28a745'; // أخضر
+    else if (value >= 3) color = '#ffc107'; // أصفر
+    else color = '#dc3545'; // أحمر
+    
+    const percentage = (value / 5) * 100;
+    
+    container.innerHTML = `
+        <div class="performance-gauge">
+            <div class="gauge-container">
+                <svg width="200" height="120" viewBox="0 0 200 120">
+                    <!-- خلفية المؤشر -->
+                    <path d="M 20 100 A 80 80 0 0 1 180 100" 
+                          fill="none" stroke="#e9ecef" stroke-width="20" stroke-linecap="round"/>
+                    <!-- مؤشر الأداء -->
+                    <path d="M 20 100 A 80 80 0 0 1 ${20 + (160 * percentage / 100)} ${100 - Math.sin(Math.PI * percentage / 100) * 80}" 
+                          fill="none" stroke="${color}" stroke-width="20" stroke-linecap="round"/>
+                    <!-- النص في المنتصف -->
+                    <text x="100" y="85" text-anchor="middle" font-size="24" font-weight="bold" fill="${color}">
+                        ${value.toFixed(1)}
+                    </text>
+                    <text x="100" y="105" text-anchor="middle" font-size="12" fill="#6c757d">
+                        من 5.0
+                    </text>
+                </svg>
+            </div>
+            <div class="gauge-status text-center mt-2">
+                <span class="badge" style="background-color: ${color};">
+                    <i class="${statusIcon} me-1"></i>
+                    ${status}
+                </span>
+            </div>
+        </div>
+    `;
+}
+
+// إنشاء رسم بياني للاتجاهات
+function createTrendChart(containerId, data, label) {
+    const ctx = document.getElementById(containerId);
+    if (!ctx) return;
+    
+    // تحديد اللون حسب الاتجاه
+    const lastValue = data[data.length - 1];
+    const previousValue = data[data.length - 2];
+    let borderColor = '#007bff';
+    
+    if (previousValue !== undefined) {
+        if (lastValue > previousValue) borderColor = '#28a745';
+        else if (lastValue < previousValue) borderColor = '#dc3545';
+    }
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس'],
+            datasets: [{
+                label: label,
+                data: data,
+                borderColor: borderColor,
+                backgroundColor: borderColor + '20',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: borderColor,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    hoverRadius: 8
+                }
+            }
+        }
+    });
+}
+
+// إنشاء داشبورد متقدم للموظف
+function createAdvancedEmployeeDashboard(employee, evaluations) {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'advancedDashboardModal';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        داشبورد متقدم - ${employee.name}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- معلومات الموظف -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-user-circle fa-3x text-primary mb-2"></i>
+                                    <h5>${employee.name}</h5>
+                                    <p class="text-muted mb-1">${employee.job_title}</p>
+                                    <small class="text-muted">الرقم الوظيفي: ${employee.employee_number}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title">مؤشر الأداء العام</h6>
+                                    <div id="overall-performance-gauge"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">إحصائيات سريعة</h6>
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <h4 class="text-primary" id="total-evaluations">0</h4>
+                                            <small>إجمالي التقييمات</small>
+                                        </div>
+                                        <div class="col-6">
+                                            <h4 class="text-success" id="avg-score">0.0</h4>
+                                            <small>المتوسط العام</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- الرسوم البيانية -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">اتجاه الأداء الشهري</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="performance-trend-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">تحليل المعايير</h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="criteria-analysis-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- جدول التقييمات التفصيلي -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">سجل التقييمات التفصيلي</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-sm" id="detailed-evaluations-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>الشهر</th>
+                                                    <th>المتوسط</th>
+                                                    <th>أعلى معيار</th>
+                                                    <th>أقل معيار</th>
+                                                    <th>الحالة</th>
+                                                    <th>الإجراءات</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- البيانات ستظهر هنا -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="exportEmployeeDashboard('${employee.id}')">
+                        <i class="fas fa-download me-1"></i>
+                        تصدير التقرير
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="shareEmployeeDashboard('${employee.id}')">
+                        <i class="fas fa-share me-1"></i>
+                        مشاركة الداشبورد
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // إضافة المودال إلى الصفحة
+    document.body.appendChild(modal);
+    
+    // إظهار المودال
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+    
+    // تنظيف المودال عند الإغلاق
+    modal.addEventListener('hidden.bs.modal', function() {
+        document.body.removeChild(modal);
+    });
+    
+    // تحميل البيانات
+    loadAdvancedDashboardData(employee, evaluations);
+}
+
+// تحميل بيانات الداشبورد المتقدم
+function loadAdvancedDashboardData(employee, evaluations) {
+    // حساب الإحصائيات
+    const totalEvaluations = evaluations.length;
+    const avgScore = evaluations.length > 0 ? 
+        evaluations.reduce((sum, eval) => sum + eval.average, 0) / evaluations.length : 0;
+    
+    // تحديث الإحصائيات
+    document.getElementById('total-evaluations').textContent = totalEvaluations;
+    document.getElementById('avg-score').textContent = avgScore.toFixed(1);
+    
+    // إنشاء مؤشر الأداء
+    const previousAvg = evaluations.length > 1 ? evaluations[evaluations.length - 2].average : null;
+    createPerformanceGauge('overall-performance-gauge', avgScore, previousAvg);
+    
+    // إنشاء رسم الاتجاه
+    const trendData = evaluations.map(eval => eval.average);
+    createTrendChart('performance-trend-chart', trendData, 'متوسط الأداء');
+    
+    // إنشاء رسم تحليل المعايير
+    if (evaluations.length > 0) {
+        const latestEvaluation = evaluations[evaluations.length - 1];
+        createCriteriaAnalysisChart('criteria-analysis-chart', latestEvaluation.criteria);
+    }
+    
+    // تحديث جدول التقييمات
+    updateDetailedEvaluationsTable(evaluations);
+}
+
+// إنشاء رسم تحليل المعايير
+function createCriteriaAnalysisChart(containerId, criteriaData) {
+    const ctx = document.getElementById(containerId);
+    if (!ctx) return;
+    
+    const labels = Object.keys(criteriaData);
+    const data = Object.values(criteriaData);
+    
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'التقييم الحالي',
+                data: data,
+                borderColor: '#007bff',
+                backgroundColor: '#007bff20',
+                borderWidth: 2,
+                pointBackgroundColor: '#007bff',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 5,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+// تحديث جدول التقييمات التفصيلي
+function updateDetailedEvaluationsTable(evaluations) {
+    const tbody = document.querySelector('#detailed-evaluations-table tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 
+                   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    
+    evaluations.forEach((evaluation, index) => {
+        const criteriaValues = Object.values(evaluation.criteria);
+        const maxCriteria = Math.max(...criteriaValues);
+        const minCriteria = Math.min(...criteriaValues);
+        
+        // تحديد الحالة
+        let status = 'مستقر';
+        let statusClass = 'secondary';
+        
+        if (index > 0) {
+            const prevAvg = evaluations[index - 1].average;
+            if (evaluation.average > prevAvg) {
+                status = 'تحسن';
+                statusClass = 'success';
+            } else if (evaluation.average < prevAvg) {
+                status = 'تراجع';
+                statusClass = 'warning';
+            }
+        }
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${months[evaluation.month - 1]} ${evaluation.year}</td>
+            <td><strong>${evaluation.average.toFixed(1)}</strong></td>
+            <td><span class="text-success">${maxCriteria.toFixed(1)}</span></td>
+            <td><span class="text-danger">${minCriteria.toFixed(1)}</span></td>
+            <td><span class="badge bg-${statusClass}">${status}</span></td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewEvaluationDetails(${evaluation.id})">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// تصدير داشبورد الموظف
+function exportEmployeeDashboard(employeeId) {
+    // محاكاة تصدير الداشبورد
+    showAlert('جاري تصدير داشبورد الموظف...', 'info');
+    
+    setTimeout(() => {
+        showAlert('تم تصدير الداشبورد بنجاح', 'success');
+    }, 2000);
+}
+
+// مشاركة داشبورد الموظف
+function shareEmployeeDashboard(employeeId) {
+    const shareUrl = `${window.location.origin}/employee-dashboard/${employeeId}`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'داشبورد الموظف',
+            url: shareUrl
+        });
+    } else {
+        // نسخ الرابط
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            showAlert('تم نسخ رابط الداشبورد', 'success');
+        });
+    }
+}
+
+// عرض تفاصيل التقييم
+function viewEvaluationDetails(evaluationId) {
+    // محاكاة عرض تفاصيل التقييم
+    showAlert('جاري تحميل تفاصيل التقييم...', 'info');
+}
+
+// تحديث دالة عرض الموظفين لدعم الداشبورد المتقدم
+function showAdvancedEmployeeDashboard(employeeId) {
+    // البحث عن الموظف
+    const employee = employees.find(emp => emp.id === employeeId);
+    if (!employee) {
+        showAlert('لم يتم العثور على الموظف', 'danger');
+        return;
+    }
+    
+    // محاكاة بيانات التقييمات
+    const mockEvaluations = [
+        {
+            id: 1,
+            month: 6,
+            year: 2025,
+            average: 4.2,
+            criteria: {
+                'الكفاءة التقنية': 4.5,
+                'حل المشاكل': 4.0,
+                'جودة الكود': 4.3,
+                'التعاون مع الفريق': 4.1,
+                'التعلم المستمر': 4.0
+            }
+        },
+        {
+            id: 2,
+            month: 7,
+            year: 2025,
+            average: 4.4,
+            criteria: {
+                'الكفاءة التقنية': 4.6,
+                'حل المشاكل': 4.2,
+                'جودة الكود': 4.5,
+                'التعاون مع الفريق': 4.3,
+                'التعلم المستمر': 4.4
+            }
+        },
+        {
+            id: 3,
+            month: 8,
+            year: 2025,
+            average: 4.6,
+            criteria: {
+                'الكفاءة التقنية': 4.8,
+                'حل المشاكل': 4.5,
+                'جودة الكود': 4.7,
+                'التعاون مع الفريق': 4.4,
+                'التعلم المستمر': 4.6
+            }
+        }
+    ];
+    
+    createAdvancedEmployeeDashboard(employee, mockEvaluations);
+}
+
