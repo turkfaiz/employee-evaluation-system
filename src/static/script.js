@@ -1378,3 +1378,348 @@ loadEmployeeData = async function() {
     }
 };
 
+
+
+// ===== دوال الإعدادات والتخصيص =====
+
+// تطبيق موضوع الألوان
+function applyColorTheme() {
+    const primaryColor = document.getElementById('primary-color').value;
+    
+    // تطبيق اللون على العناصر المختلفة
+    const root = document.documentElement;
+    root.style.setProperty('--bs-primary', primaryColor);
+    
+    // تحديث الألوان في CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .bg-primary { background-color: ${primaryColor} !important; }
+        .btn-primary { background-color: ${primaryColor}; border-color: ${primaryColor}; }
+        .btn-primary:hover { background-color: ${adjustBrightness(primaryColor, -20)}; border-color: ${adjustBrightness(primaryColor, -20)}; }
+        .text-primary { color: ${primaryColor} !important; }
+        .navbar-dark.bg-primary { background-color: ${primaryColor} !important; }
+        .card-header.bg-primary { background-color: ${primaryColor} !important; }
+    `;
+    
+    // إزالة الستايل القديم إن وجد
+    const oldStyle = document.getElementById('custom-theme');
+    if (oldStyle) {
+        oldStyle.remove();
+    }
+    
+    style.id = 'custom-theme';
+    document.head.appendChild(style);
+    
+    // حفظ اللون في التخزين المحلي
+    localStorage.setItem('primaryColor', primaryColor);
+    
+    showAlert('تم تطبيق الألوان بنجاح', 'success');
+}
+
+// إعادة تعيين الألوان
+function resetColors() {
+    document.getElementById('primary-color').value = '#0d6efd';
+    
+    // إزالة الستايل المخصص
+    const customStyle = document.getElementById('custom-theme');
+    if (customStyle) {
+        customStyle.remove();
+    }
+    
+    // إزالة من التخزين المحلي
+    localStorage.removeItem('primaryColor');
+    
+    showAlert('تم إعادة تعيين الألوان', 'info');
+}
+
+// تعديل سطوع اللون
+function adjustBrightness(hex, percent) {
+    const num = parseInt(hex.replace("#", ""), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) + amt;
+    const G = (num >> 8 & 0x00FF) + amt;
+    const B = (num & 0x0000FF) + amt;
+    return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+        (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+        (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+}
+
+// تحديث العلامة التجارية للنظام
+function updateSystemBranding() {
+    const systemName = document.getElementById('system-name').value;
+    const logoFile = document.getElementById('logo-upload').files[0];
+    
+    // تحديث اسم النظام
+    if (systemName) {
+        document.getElementById('system-title').innerHTML = `
+            <i class="fas fa-chart-line me-2"></i>
+            ${systemName}
+        `;
+        document.title = systemName;
+        localStorage.setItem('systemName', systemName);
+    }
+    
+    // تحديث الشعار
+    if (logoFile) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const logoUrl = e.target.result;
+            document.getElementById('system-title').innerHTML = `
+                <img src="${logoUrl}" alt="شعار النظام" style="height: 30px; margin-left: 10px;">
+                ${systemName}
+            `;
+            localStorage.setItem('logoUrl', logoUrl);
+        };
+        reader.readAsDataURL(logoFile);
+    }
+    
+    showAlert('تم حفظ التغييرات بنجاح', 'success');
+}
+
+// ===== دوال Google Sheets =====
+
+// اختبار اتصال Google Sheets
+async function testSheetsConnection() {
+    const sheetsUrl = document.getElementById('sheets-url').value;
+    const apiKey = document.getElementById('sheets-api-key').value;
+    
+    if (!sheetsUrl || !apiKey) {
+        showAlert('يرجى إدخال رابط Google Sheets ومفتاح API', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/test-sheets', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sheets_url: sheetsUrl,
+                api_key: apiKey
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('تم الاتصال بـ Google Sheets بنجاح', 'success');
+        } else {
+            showAlert('فشل في الاتصال: ' + result.error, 'danger');
+        }
+    } catch (error) {
+        showAlert('خطأ في الاتصال بـ Google Sheets', 'danger');
+    }
+}
+
+// حفظ إعدادات Google Sheets
+async function saveSheetsSettings() {
+    const sheetsUrl = document.getElementById('sheets-url').value;
+    const apiKey = document.getElementById('sheets-api-key').value;
+    const autoSync = document.getElementById('auto-sync').checked;
+    
+    try {
+        const response = await fetch('/api/save-sheets-settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                sheets_url: sheetsUrl,
+                api_key: apiKey,
+                auto_sync: autoSync
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('تم حفظ إعدادات Google Sheets', 'success');
+        } else {
+            showAlert('خطأ في حفظ الإعدادات: ' + result.error, 'danger');
+        }
+    } catch (error) {
+        showAlert('خطأ في حفظ إعدادات Google Sheets', 'danger');
+    }
+}
+
+// ===== دوال لوحة المدراء =====
+
+// تحميل إحصائيات المدراء
+async function loadManagerStats() {
+    const month = document.getElementById('admin-month').value;
+    const year = document.getElementById('admin-year').value;
+    
+    try {
+        const response = await fetch(`/api/manager-stats?month=${month}&year=${year}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+            // تحديث الإحصائيات
+            document.getElementById('total-managers').textContent = data.total_managers;
+            document.getElementById('completed-evaluations').textContent = data.completed_evaluations;
+            document.getElementById('pending-evaluations').textContent = data.pending_evaluations;
+            
+            // تحديث جدول المدراء
+            updateManagersTable(data.managers);
+            
+            showAlert('تم تحميل إحصائيات المدراء', 'success');
+        } else {
+            showAlert('خطأ في تحميل الإحصائيات', 'danger');
+        }
+    } catch (error) {
+        showAlert('خطأ في الاتصال بالخادم', 'danger');
+    }
+}
+
+// تحديث جدول المدراء
+function updateManagersTable(managers) {
+    const tbody = document.querySelector('#managers-table tbody');
+    tbody.innerHTML = '';
+    
+    managers.forEach(manager => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${manager.name}</td>
+            <td>${manager.department}</td>
+            <td>${manager.total_employees}</td>
+            <td>${manager.completed_evaluations}</td>
+            <td>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: ${manager.completion_percentage}%">
+                        ${manager.completion_percentage}%
+                    </div>
+                </div>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="copyManagerLink('${manager.link}')">
+                    <i class="fas fa-copy"></i> نسخ الرابط
+                </button>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-warning" onclick="resetManagerPassword('${manager.id}')">
+                    <i class="fas fa-key"></i> إعادة تعيين كلمة المرور
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// إنشاء روابط المدراء
+async function generateManagerLinks() {
+    try {
+        const response = await fetch('/api/generate-manager-links', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('تم إنشاء روابط المدراء بنجاح', 'success');
+            loadManagerStats(); // إعادة تحميل الإحصائيات
+        } else {
+            showAlert('خطأ في إنشاء الروابط: ' + result.error, 'danger');
+        }
+    } catch (error) {
+        showAlert('خطأ في إنشاء روابط المدراء', 'danger');
+    }
+}
+
+// نسخ رابط المدير
+function copyManagerLink(link) {
+    navigator.clipboard.writeText(link).then(() => {
+        showAlert('تم نسخ الرابط', 'success');
+    }).catch(() => {
+        showAlert('فشل في نسخ الرابط', 'danger');
+    });
+}
+
+// إعادة تعيين كلمة مرور المدير
+async function resetManagerPassword(managerId) {
+    if (!confirm('هل أنت متأكد من إعادة تعيين كلمة مرور هذا المدير؟')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/reset-manager-password/${managerId}`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert(`تم إعادة تعيين كلمة المرور الجديدة: ${result.new_password}`, 'success');
+        } else {
+            showAlert('خطأ في إعادة تعيين كلمة المرور', 'danger');
+        }
+    } catch (error) {
+        showAlert('خطأ في إعادة تعيين كلمة المرور', 'danger');
+    }
+}
+
+// تحميل الإعدادات المحفوظة عند بدء التطبيق
+function loadSavedSettings() {
+    // تحميل اللون المحفوظ
+    const savedColor = localStorage.getItem('primaryColor');
+    if (savedColor) {
+        document.getElementById('primary-color').value = savedColor;
+        applyColorTheme();
+    }
+    
+    // تحميل اسم النظام المحفوظ
+    const savedName = localStorage.getItem('systemName');
+    if (savedName) {
+        document.getElementById('system-name').value = savedName;
+        document.getElementById('system-title').innerHTML = `
+            <i class="fas fa-chart-line me-2"></i>
+            ${savedName}
+        `;
+        document.title = savedName;
+    }
+    
+    // تحميل الشعار المحفوظ
+    const savedLogo = localStorage.getItem('logoUrl');
+    if (savedLogo) {
+        const systemName = savedName || 'مركز تجربة العميل';
+        document.getElementById('system-title').innerHTML = `
+            <img src="${savedLogo}" alt="شعار النظام" style="height: 30px; margin-left: 10px;">
+            ${systemName}
+        `;
+    }
+}
+
+// تحديث دالة showPage لدعم الصفحات الجديدة
+const originalShowPage = showPage;
+showPage = function(pageId) {
+    // إخفاء جميع الصفحات
+    const pages = document.querySelectorAll('.page-content');
+    pages.forEach(page => page.style.display = 'none');
+    
+    // إظهار الصفحة المطلوبة
+    const targetPage = document.getElementById(pageId);
+    if (targetPage) {
+        targetPage.style.display = 'block';
+        
+        // تحميل البيانات حسب الصفحة
+        if (pageId === 'admin-dashboard') {
+            loadManagerStats();
+        } else if (pageId === 'settings-page') {
+            loadSavedSettings();
+        }
+    }
+    
+    // استدعاء الدالة الأصلية للصفحات الأخرى
+    if (typeof originalShowPage === 'function') {
+        originalShowPage(pageId);
+    }
+};
+
+// تحميل الإعدادات عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    loadSavedSettings();
+});
+

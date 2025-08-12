@@ -15,6 +15,8 @@ from src.routes.employee import employee_bp
 from src.routes.evaluation import evaluation_bp
 from src.routes.export import export_bp
 from src.routes.share import share_bp
+from src.routes.settings import settings_bp
+from src.routes.manager import manager_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
@@ -28,6 +30,8 @@ app.register_blueprint(employee_bp, url_prefix='/api')
 app.register_blueprint(evaluation_bp, url_prefix='/api')
 app.register_blueprint(export_bp, url_prefix='/api')
 app.register_blueprint(share_bp)
+app.register_blueprint(settings_bp)
+app.register_blueprint(manager_bp)
 
 # uncomment if you need to use database
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
